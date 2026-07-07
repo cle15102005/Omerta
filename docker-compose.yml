@@ -1,0 +1,16 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: omerta-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: omerta
+      MONGO_INITDB_ROOT_PASSWORD: omerta_dev_secret
+      MONGO_INITDB_DATABASE: omerta
+    ports:
+      - "27017:27017"
+    volumes:
+      - omerta_mongo_data:/data/db
+
+volumes:
+  omerta_mongo_data:
