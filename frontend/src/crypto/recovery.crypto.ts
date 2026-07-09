@@ -68,6 +68,6 @@ export async function decryptPEKFromBackup(
   const rawPEK = base64ToBuffer(pekB64);
 
   return crypto.subtle.importKey(
-    'raw', rawPEK, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+    'raw', rawPEK as any, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
   );
 }

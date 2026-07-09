@@ -8,10 +8,16 @@ const api = axios.create({
 export const authApi = {
   getSalt:             (email: string) => api.get<{ salt: string }>(`/auth/salt/${email}`),
   getRecoverySalt:     (email: string) => api.get<{ salt2: string }>(`/auth/recovery-salt/${email}`),
-  getPEKBackup:        (email: string) => api.get<{ encryptedPEKBackup: string }>(`/auth/pek-backup/${email}`),
+  getRecoveryData:     (data: { email: string; recoveryAuthHash: string }) => api.post<{ 
+    encryptedPEKBackup: string; 
+    encryptedPrivateKey: string; 
+    encryptedECDSAPrivateKey: string; 
+    vaultItems: Array<{ _id: string; encryptedData: string; history?: Array<{ encryptedData: string; savedAt: string }> }> 
+  }>('/auth/recovery-data', data),
   register:            (data: object)  => api.post('/auth/register', data),
   login:               (data: object)  => api.post('/auth/login', data),
   logout:              ()              => api.post('/auth/logout'),
-  me:                  ()              => api.get<{ email: string; userId: string }>('/auth/me'),
+  deleteAccount:       ()              => api.delete('/auth/account'),
+  me:                  ()              => api.get<{ email: string; userId: string; encryptedPrivateKey?: string; encryptedECDSAPrivateKey?: string; ecdsaPublicKey?: string }>('/auth/me'),
   recover:             (data: object)  => api.post('/auth/recover', data),
 };

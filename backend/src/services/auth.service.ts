@@ -1,6 +1,8 @@
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../entities/User.entity';
+import { VaultItem } from '../entities/VaultItem.entity';
 import {
   JWT_SECRET, JWT_EXPIRY, BCRYPT_ROUNDS,
   LOCKOUT_MAX_ATTEMPTS, LOCKOUT_DURATION_MS,
@@ -36,11 +38,15 @@ export async function registerUser(data: RegisterInput) {
   const authKeyBuffer  = Buffer.from(data.authKeyHex, 'hex');
   const authKeyHash    = await bcrypt.hash(authKeyBuffer.toString('base64'), BCRYPT_ROUNDS);
 
+  // Hash the recoveryAuthHash
+  const recoveryAuthHash = await bcrypt.hash(data.recoveryAuthHash, BCRYPT_ROUNDS);
+
   const user = await User.create({
     email:                    data.email,
     authKeyHash,
     salt:                     data.salt,
     salt2:                    data.salt2,
+    recoveryAuthHash,
     encryptedPEKBackup:       data.encryptedPEKBackup,
     // RSA-OAEP keys
     publicKey:                data.publicKey,
@@ -106,15 +112,64 @@ export async function getEncryptedPEKBackup(email: string): Promise<string | nul
   return user?.encryptedPEKBackup ?? null;
 }
 
+export async function getRecoveryData(email: string, recoveryAuthHash: string) {
+  const user = await User.findOne({ email }, 'encryptedPEKBackup encryptedPrivateKey encryptedECDSAPrivateKey recoveryAuthHash');
+  if (!user) return null;
+
+  const isValid = await bcrypt.compare(recoveryAuthHash, user.recoveryAuthHash);
+  if (!isValid) throw new Error('INVALID_RECOVERY_HASH');
+  const items = await VaultItem.find({ userId: user._id }, 'encryptedData history');
+  return {
+    encryptedPEKBackup: user.encryptedPEKBackup,
+    encryptedPrivateKey: user.encryptedPrivateKey,
+    encryptedECDSAPrivateKey: user.encryptedECDSAPrivateKey,
+    vaultItems: items,
+  };
+}
+
 export async function resetPassword(data: RecoverInput): Promise<boolean> {
-  const user = await User.findOne({ email: data.email });
-  if (!user) return false;
+  try {
+    const user = await User.findOne({ email: data.email });
+    if (!user) {
+      return false;
+    }
 
-  const authKeyBuffer = Buffer.from(data.newAuthKeyHex, 'hex');
-  const newAuthKeyHash = await bcrypt.hash(authKeyBuffer.toString('base64'), BCRYPT_ROUNDS);
+    const isValid = await bcrypt.compare(data.recoveryAuthHash, user.recoveryAuthHash);
+    if (!isValid) throw new Error('INVALID_RECOVERY_HASH');
 
-  user.authKeyHash        = newAuthKeyHash;
-  user.encryptedPEKBackup = data.newEncryptedPEKBackup;
-  await user.save();
-  return true;
+    const authKeyBuffer = Buffer.from(data.newAuthKeyHex, 'hex');
+    const newAuthKeyHash = await bcrypt.hash(authKeyBuffer.toString('base64'), BCRYPT_ROUNDS);
+
+    user.authKeyHash = newAuthKeyHash;
+    user.encryptedPEKBackup = data.newEncryptedPEKBackup;
+    user.encryptedPrivateKey = data.newEncryptedPrivateKey;
+    user.encryptedECDSAPrivateKey = data.newEncryptedECDSAPrivateKey;
+    await user.save();
+
+    for (const item of data.vaultItems) {
+      await VaultItem.updateOne(
+        { _id: item._id, userId: user._id },
+        { 
+          $set: { 
+            encryptedData: item.encryptedData,
+            history: item.history.map(h => ({ encryptedData: h.encryptedData, savedAt: new Date(h.savedAt) }))
+          } 
+        }
+      );
+    }
+
+    return true;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function deleteAccount(userId: string): Promise<boolean> {
+  try {
+    await VaultItem.deleteMany({ userId });
+    const result = await User.deleteOne({ _id: userId });
+    return result.deletedCount > 0;
+  } catch (err) {
+    throw err;
+  }
 }

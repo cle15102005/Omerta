@@ -8,10 +8,10 @@ import {
   jwtExpiryMs,
 } from '../env';
 import { User } from '../entities/User.entity';
-import { RegisterDto, LoginDto, RecoverDto } from '../dtos/auth.dto';
+import { RegisterDto, LoginDto, RecoverDto, RecoveryDataRequestDto } from '../dtos/auth.dto';
 import {
   registerUser, loginUser, getSalt, getRecoverySalt,
-  getEncryptedPEKBackup, resetPassword, generateToken,
+  getEncryptedPEKBackup, getRecoveryData, resetPassword, generateToken, deleteAccount
 } from '../services/auth.service';
 import { authMiddleware } from '../middleware/auth.middleware';
 
@@ -107,8 +107,25 @@ router.post('/logout', (_req: Request, res: Response) => {
 });
 
 // GET /api/auth/me
-router.get('/me', authMiddleware, (req: Request, res: Response) => {
-  res.json({ email: req.user?.email, userId: req.user?.userId });
+router.get('/me', authMiddleware, async (req: Request, res: Response) => {
+  const user = await User.findById(req.user?.userId);
+  if (!user) { res.status(404).json({ message: 'User not found' }); return; }
+
+  res.json({ 
+    email: user.email, 
+    userId: user._id,
+    encryptedPrivateKey: user.encryptedPrivateKey,
+    encryptedECDSAPrivateKey: user.encryptedECDSAPrivateKey,
+    ecdsaPublicKey: user.ecdsaPublicKey
+  });
+});
+
+// DELETE /api/auth/account
+router.delete('/account', authMiddleware, async (req: Request, res: Response) => {
+  const ok = await deleteAccount(req.user!.userId);
+  if (!ok) { res.status(404).json({ message: 'User not found' }); return; }
+  res.clearCookie('auth_token', { httpOnly: true, secure: NODE_ENV === 'production', sameSite: 'strict' });
+  res.json({ message: 'Account deleted' });
 });
 
 // GET /api/auth/recovery-salt/:email  — for recovery code PBKDF2
@@ -125,14 +142,40 @@ router.get('/pek-backup/:email', async (req: Request, res: Response) => {
   res.json({ encryptedPEKBackup: backup });
 });
 
+// POST /api/auth/recovery-data
+router.post('/recovery-data', authLimiter, async (req: Request, res: Response) => {
+  const parsed = RecoveryDataRequestDto.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: 'Invalid input' }); return; }
+
+  try {
+    const data = await getRecoveryData(parsed.data.email, parsed.data.recoveryAuthHash);
+    if (!data) { res.status(404).json({ message: 'User not found' }); return; }
+    res.json(data);
+  } catch (err: any) {
+    if (err.message === 'INVALID_RECOVERY_HASH') {
+      res.status(401).json({ message: 'Invalid recovery code' });
+      return;
+    }
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // POST /api/auth/recover  — set new master password after recovery code verification
 router.post('/recover', authLimiter, async (req: Request, res: Response) => {
   const parsed = RecoverDto.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: 'Invalid input' }); return; }
+  if (!parsed.success) { res.status(400).json({ message: 'Invalid input', error: parsed.error.errors }); return; }
 
-  const ok = await resetPassword(parsed.data);
-  if (!ok) { res.status(404).json({ message: 'User not found' }); return; }
-  res.json({ message: 'Password reset successful' });
+  try {
+    const ok = await resetPassword(parsed.data);
+    if (!ok) { res.status(404).json({ message: 'User not found' }); return; }
+    res.json({ message: 'Password reset successful' });
+  } catch (err: any) {
+    if (err.message === 'INVALID_RECOVERY_HASH') {
+      res.status(401).json({ message: 'Invalid recovery code' });
+      return;
+    }
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // GET /api/auth/public-keys/:email

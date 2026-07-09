@@ -5,6 +5,7 @@ export interface IUser extends Document {
   authKeyHash: string;             // bcrypt(Auth Key) — NOT the master password
   salt: string;                    // base64, 16 bytes — for PBKDF2 (master password)
   salt2: string;                   // base64, 16 bytes — for PBKDF2 (recovery code)
+  recoveryAuthHash: string;        // bcrypt(SHA256(recoveryCode)) — to verify recovery
   encryptedPEKBackup: string;      // AES-256-GCM(PEK, RecoveryKey) — for account recovery
   // ── RSA-OAEP keys (VEK exchange for shared vaults) ──────────────────────
   publicKey: string;               // RSA-OAEP public key PEM — shared freely
@@ -30,6 +31,7 @@ const UserSchema = new Schema<IUser>(
     authKeyHash:         { type: String, required: true },
     salt:                { type: String, required: true },
     salt2:               { type: String, required: true },
+    recoveryAuthHash:    { type: String, required: true },
     encryptedPEKBackup:  { type: String, required: true },
     publicKey:                { type: String, required: true },
     encryptedPrivateKey:      { type: String, required: true },
