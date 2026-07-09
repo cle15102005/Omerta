@@ -25,41 +25,55 @@ async function checkMembership(vaultId: string, userId: string, requiredRole?: M
 // ── Vault Management ──────────────────────────────────────────────────────────
 
 export async function createSharedVault(userId: string, data: CreateSharedVaultInput) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const vault = new SharedVault({
-      name: data.name,
-      ownerId: userId,
-    });
-    await vault.save({ session });
+  const vault = new SharedVault({
+    encryptedMetadata: data.encryptedMetadata,
+    ownerId: userId,
+  });
+  await vault.save();
 
-    const membership = new VaultMembership({
-      vaultId: vault._id,
-      userId: userId,
-      role: 'owner',
-      encryptedVEK: data.encryptedVEK,
-    });
-    await membership.save({ session });
+  const membership = new VaultMembership({
+    vaultId: vault._id,
+    userId: userId,
+    role: 'owner',
+    encryptedVEK: data.encryptedVEK,
+  });
+  await membership.save();
 
-    await session.commitTransaction();
-    return { vault, membership };
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
-  }
+  return { vault, membership };
 }
 
 export async function getMySharedVaults(userId: string) {
-  const memberships = await VaultMembership.find({ userId }).populate('vaultId');
-  return memberships.map((m) => ({
-    vault: m.vaultId,
-    role: m.role,
-    encryptedVEK: m.encryptedVEK,
-    addedAt: m.addedAt,
-  }));
+  // Find all memberships for this user to get the vault IDs
+  const myMemberships = await VaultMembership.find({ userId });
+  const vaultIds = myMemberships.map(m => m.vaultId);
+
+  // Fetch the vaults
+  const vaults = await SharedVault.find({ _id: { $in: vaultIds } }).lean();
+
+  // Fetch ALL members for these vaults and populate their user emails
+  const allMemberships = await VaultMembership.find({ vaultId: { $in: vaultIds } })
+    .populate('userId', 'email')
+    .lean();
+
+  // Group members by vault ID and attach them
+  return vaults.map(vault => {
+    const members = allMemberships.filter(m => m.vaultId.toString() === vault._id.toString());
+    return {
+      ...vault,
+      members
+    };
+  });
+}
+
+export async function deleteSharedVault(userId: string, vaultId: string) {
+  // Must be the owner to delete
+  await checkMembership(vaultId, userId, 'owner');
+
+  await SharedVaultItem.deleteMany({ vaultId });
+  await VaultMembership.deleteMany({ vaultId });
+  const result = await SharedVault.deleteOne({ _id: vaultId });
+  
+  return result.deletedCount > 0;
 }
 
 // ── Member Management ─────────────────────────────────────────────────────────

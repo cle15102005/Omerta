@@ -16,16 +16,18 @@ const KEY_LENGTH        = 256; // bits
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function bufferToBase64(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+function bufferToBase64(buf: ArrayBuffer | Uint8Array): string {
+  const arr = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return btoa(String.fromCharCode(...arr));
 }
 
 function base64ToBuffer(b64: string): Uint8Array {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
-function bufferToHex(buf: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+function bufferToHex(buf: ArrayBuffer | Uint8Array): string {
+  const arr = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return Array.from(arr).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 function hexToBuffer(hex: string): Uint8Array {
@@ -34,6 +36,11 @@ function hexToBuffer(hex: string): Uint8Array {
     result[i / 2] = parseInt(hex.slice(i, i + 2), 16);
   }
   return result;
+}
+
+export function generateSalt(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return bufferToBase64(bytes.buffer);
 }
 
 // ── Key Derivation ────────────────────────────────────────────────────────────
@@ -52,11 +59,13 @@ export async function deriveMasterKeys(
   const enc      = new TextEncoder();
   const salt     = base64ToBuffer(saltBase64);
   const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(masterPassword), 'PBKDF2', false, ['deriveBits']
+    'raw',
+    enc.encode(masterPassword) as any,
+    { name: 'PBKDF2' }, false, ['deriveBits']
   );
 
   const derivedBits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: PBKDF2_HASH },
+    { name: 'PBKDF2', salt: salt as any, iterations: PBKDF2_ITERATIONS, hash: PBKDF2_HASH },
     keyMaterial,
     512 // 64 bytes
   );
@@ -65,7 +74,7 @@ export async function deriveMasterKeys(
   const pekRaw     = derivedBits.slice(32, 64);
 
   const pek = await crypto.subtle.importKey(
-    'raw', pekRaw, { name: 'AES-GCM', length: KEY_LENGTH }, false, ['encrypt', 'decrypt']
+    'raw', pekRaw, { name: 'AES-GCM', length: KEY_LENGTH }, true, ['encrypt', 'decrypt']
   );
 
   return { authKeyHex: bufferToHex(authKeyRaw), pek };
@@ -82,7 +91,7 @@ export async function encryptPayload(key: CryptoKey, plaintext: object): Promise
   const enc = new TextEncoder();
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: iv as any },
     key,
     enc.encode(JSON.stringify(plaintext))
   );
@@ -99,9 +108,9 @@ export async function decryptPayload<T = unknown>(key: CryptoKey, encrypted: str
   const ciphertext = base64ToBuffer(ciphertextB64);
 
   const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: iv as any },
     key,
-    ciphertext
+    ciphertext as any
   );
 
   return JSON.parse(new TextDecoder().decode(plaintext)) as T;

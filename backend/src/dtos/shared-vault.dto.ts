@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const CreateSharedVaultDto = z.object({
-  name: z.string().min(1),
+  encryptedMetadata: z.string().min(1), // AES-256-GCM(VEK) of { name, description }
   encryptedVEK: z.string().min(1), // Owner's VEK encrypted with their RSA public key
 });
 

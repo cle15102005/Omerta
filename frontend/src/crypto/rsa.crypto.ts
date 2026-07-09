@@ -38,7 +38,7 @@ export async function generateRSAKeyPair(): Promise<CryptoKeyPair> {
     {
       name:           'RSA-OAEP',
       modulusLength:  2048,
-      publicExponent: new Uint8Array([1, 0, 1]),
+      publicExponent: new Uint8Array([1, 0, 1]) as any,
       hash:           'SHA-256',
     },
     true,
@@ -72,7 +72,7 @@ export async function exportPublicKeyPEM(publicKey: CryptoKey): Promise<string> 
 export async function importPublicKeyPEM(pem: string): Promise<CryptoKey> {
   const b64 = pem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\n/g, '');
   const der = base64ToBuffer(b64);
-  return crypto.subtle.importKey('spki', der, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['encrypt']);
+  return crypto.subtle.importKey('spki', der as any, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['encrypt']);
 }
 
 // ── ECDSA Export / Import ─────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ export async function encryptPrivateKey(privateKey: CryptoKey, pek: CryptoKey): 
 export async function decryptPrivateKey(encryptedPrivateKey: string, pek: CryptoKey): Promise<CryptoKey> {
   const { privateKey: b64 } = await decryptPayload<{ privateKey: string }>(pek, encryptedPrivateKey);
   const der = base64ToBuffer(b64);
-  return crypto.subtle.importKey('pkcs8', der, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt']);
+  return crypto.subtle.importKey('pkcs8', der as any, { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['decrypt']);
 }
 
 /** Encrypt ECDSA private key with PEK — same pattern as RSA private key */
@@ -133,7 +133,7 @@ export async function signRSAPublicKey(
   const sigBuffer = await crypto.subtle.sign(
     { name: 'ECDSA', hash: 'SHA-256' },
     ecdsaPrivateKey,
-    data
+    data as any
   );
   return bufferToBase64(sigBuffer);
 }
@@ -156,8 +156,8 @@ export async function verifyRSAPublicKey(
     return await crypto.subtle.verify(
       { name: 'ECDSA', hash: 'SHA-256' },
       ecdsaPublicKey,
-      sigBuffer,
-      data
+      sigBuffer as any,
+      data as any
     );
   } catch {
     return false; // malformed input = treat as failed verification
@@ -175,7 +175,7 @@ export async function verifyRSAPublicKey(
  */
 export async function computeKeyFingerprint(ecdsaPublicKeyB64: string): Promise<string> {
   const data    = new TextEncoder().encode(ecdsaPublicKeyB64);
-  const hashBuf = await crypto.subtle.digest('SHA-256', data);
+  const hashBuf = await crypto.subtle.digest('SHA-256', data as any);
   const hex     = Array.from(new Uint8Array(hashBuf))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
@@ -269,13 +269,13 @@ export async function generateVEK(): Promise<CryptoKey> {
  */
 export async function encryptVEKForMember(vek: CryptoKey, memberPublicKey: CryptoKey): Promise<string> {
   const rawVEK = await crypto.subtle.exportKey('raw', vek);
-  const enc    = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, memberPublicKey, rawVEK);
+  const enc    = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, memberPublicKey, rawVEK as any);
   return bufferToBase64(enc);
 }
 
 /** Bob decrypts his encryptedVEK with his RSA private key → recovers VEK */
 export async function decryptVEKFromMembership(encryptedVEKB64: string, privateKey: CryptoKey): Promise<CryptoKey> {
   const enc    = base64ToBuffer(encryptedVEKB64);
-  const rawVEK = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, enc);
-  return crypto.subtle.importKey('raw', rawVEK, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const rawVEK = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, enc as any);
+  return crypto.subtle.importKey('raw', rawVEK as any, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
 }

@@ -29,6 +29,19 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+router.delete('/:vaultId', async (req: Request, res: Response) => {
+  try {
+    const ok = await sharedVaultService.deleteSharedVault(req.user!.userId, req.params.vaultId as string);
+    if (ok) {
+      res.json({ message: 'Vault deleted successfully' });
+    } else {
+      res.status(404).json({ message: 'Vault not found' });
+    }
+  } catch (error: any) {
+    res.status(403).json({ message: error.message });
+  }
+});
+
 // ── Member Management ─────────────────────────────────────────────────────────
 
 router.post('/:vaultId/invite', async (req: Request, res: Response) => {
