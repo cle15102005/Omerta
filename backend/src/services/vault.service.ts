@@ -23,30 +23,20 @@ export async function getItem(userId: string, itemId: string) {
 
 // ── Create ────────────────────────────────────────────────────────────────────
 export async function createItem(userId: string, data: CreateVaultItemInput) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const [item] = await VaultItem.create([{
-      userId,
-      nameLeafHash:  data.nameLeafHash,
-      category:      data.category,
-      encryptedData: data.encryptedData,
-    }], { session });
+  const [item] = await VaultItem.create([{
+    userId,
+    nameLeafHash:  data.nameLeafHash,
+    category:      data.category,
+    encryptedData: data.encryptedData,
+  }]);
 
-    // Update user's Merkle vault index
-    await User.findByIdAndUpdate(userId, {
-      'vaultIndex.merkleRoot': data.vaultIndex.merkleRoot,
-      'vaultIndex.leafHashes': data.vaultIndex.leafHashes,
-    }, { session });
+  // Update user's Merkle vault index
+  await User.findByIdAndUpdate(userId, {
+    'vaultIndex.merkleRoot': data.vaultIndex.merkleRoot,
+    'vaultIndex.leafHashes': data.vaultIndex.leafHashes,
+  });
 
-    await session.commitTransaction();
-    return item;
-  } catch (err) {
-    await session.abortTransaction();
-    throw err;
-  } finally {
-    session.endSession();
-  }
+  return item;
 }
 
 // ── Update (push current to history before replacing) ────────────────────────
@@ -104,7 +94,36 @@ export async function getItemHistory(userId: string, itemId: string) {
 
 // ── Export (full vault for backup) ───────────────────────────────────────────
 export async function exportVault(userId: string) {
-  const user  = await User.findById(userId, 'email salt');
+  const user  = await User.findById(userId, 'email salt vaultIndex');
   const items = await VaultItem.find({ userId });
   return { user, items };
+}
+
+// ── Import (restore full vault from backup) ──────────────────────────────────
+export async function importVault(userId: string, data: {
+  items: any[];
+  vaultIndex: { merkleRoot: string; leafHashes: string[] };
+}) {
+  await VaultItem.deleteMany({ userId });
+  
+  const mappedItems = data.items.map(item => ({
+    userId,
+    nameLeafHash: item.nameLeafHash,
+    category: item.category,
+    encryptedData: item.encryptedData,
+    history: item.history || [],
+    isFavorite: item.isFavorite || false,
+    createdAt: item.createdAt || new Date(),
+    updatedAt: item.updatedAt || new Date(),
+  }));
+  
+  if (mappedItems.length > 0) {
+    await VaultItem.insertMany(mappedItems);
+  }
+
+  await User.findByIdAndUpdate(userId, {
+    'vaultIndex.merkleRoot': data.vaultIndex.merkleRoot,
+    'vaultIndex.leafHashes': data.vaultIndex.leafHashes,
+  });
+  return true;
 }

@@ -75,7 +75,7 @@ export const RATE_REGISTER_MAX     = intEnv('RATE_REGISTER_MAX', 3);
 // ── Request body ──────────────────────────────────────────────────────────────
 
 /** Maximum allowed request body size. Keep small to prevent payload-based DoS. */
-export const BODY_LIMIT            = process.env.BODY_LIMIT ?? '100kb';
+export const BODY_LIMIT            = process.env.BODY_LIMIT ?? '10mb';
 
 // ── Vault ─────────────────────────────────────────────────────────────────────
 

@@ -11,4 +11,5 @@ export const vaultApi = {
   delete:    (id: string, vaultIndex: object) => api.delete(`/vault/${id}`, { data: vaultIndex }),
   history:   (id: string)            => api.get(`/vault/${id}/history`),
   export:    ()                      => api.get('/vault/export'),
+  import:    (data: { items: any[], vaultIndex: { merkleRoot: string, leafHashes: string[] } }) => api.post('/vault/import', data),
 };

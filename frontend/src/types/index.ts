@@ -38,9 +38,9 @@ export interface VaultItemFull extends VaultItemMeta {
   history: Array<{ encryptedData: string; savedAt: string }>;
 }
 
-/** Vault item after client-side decryption — ready to display */
 export interface VaultItemDecrypted extends VaultItemMeta {
   payload: VaultItemPayload;
+  history?: Array<{ encryptedData: string; savedAt: string }>;
 }
 
 /** Merkle tree leaf (name + salt + hash) */

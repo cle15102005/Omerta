@@ -3,7 +3,6 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import mongoSanitize from 'express-mongo-sanitize';
 import pinoHttp from 'pino-http';
 import { PORT, MONGO_URI, CORS_ORIGIN, BODY_LIMIT } from './env';
 
@@ -17,7 +16,6 @@ const app = express();
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: BODY_LIMIT })); // configurable via BODY_LIMIT env var
 app.use(cookieParser());
-app.use(mongoSanitize());  // strips $ and . from req.body/params/query — blocks NoSQL injection
 app.use(pinoHttp());       // structured JSON request logging (method, url, status, responseTime)
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -30,7 +28,8 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function bootstrap() {
-  await mongoose.connect(MONGO_URI);
+  const uri = MONGO_URI.includes('?') ? `${MONGO_URI}&retryWrites=false` : `${MONGO_URI}?retryWrites=false`;
+  await mongoose.connect(uri);
   console.log('[DB] MongoDB connected');
 
   app.listen(PORT, () => {

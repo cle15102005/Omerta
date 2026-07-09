@@ -3,7 +3,7 @@ import { authMiddleware } from '../middleware/auth.middleware';
 import { CreateVaultItemDto, UpdateVaultItemDto } from '../dtos/vault.dto';
 import {
   listItems, getItem, createItem, updateItem,
-  deleteItem, getItemHistory, exportVault,
+  deleteItem, getItemHistory, exportVault, importVault
 } from '../services/vault.service';
 
 const router = Router();
@@ -28,6 +28,27 @@ router.post('/', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[Vault] Create error:', err);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/vault/export  — full encrypted backup
+router.get('/export', async (req: Request, res: Response) => {
+  const data = await exportVault(req.user!.userId);
+  res.json({ version: 1, createdAt: new Date().toISOString(), ...data });
+});
+
+// POST /api/vault/import — restore from backup
+router.post('/import', async (req: Request, res: Response) => {
+  if (!req.body.items || !req.body.vaultIndex) {
+    res.status(400).json({ message: 'Invalid backup format' }); return;
+  }
+  
+  try {
+    await importVault(req.user!.userId, req.body);
+    res.json({ message: 'Vault imported successfully' });
+  } catch (err) {
+    console.error('[Vault] Import error:', err);
+    res.status(500).json({ message: 'Failed to import vault' });
   }
 });
 
@@ -61,12 +82,6 @@ router.get('/:id/history', async (req: Request, res: Response) => {
   const history = await getItemHistory(req.user!.userId, req.params.id as string);
   if (history === null) { res.status(404).json({ message: 'Item not found' }); return; }
   res.json(history);
-});
-
-// GET /api/vault/export  — full encrypted backup
-router.get('/export', async (req: Request, res: Response) => {
-  const data = await exportVault(req.user!.userId);
-  res.json({ version: 1, createdAt: new Date().toISOString(), ...data });
 });
 
 export default router;

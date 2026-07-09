@@ -30,6 +30,8 @@ interface VaultState {
   // ── Session lock ─────────────────────────────────────────────────────────────
   isLocked:       boolean;
 
+  vaultRefreshTrigger: number;
+
   // ── Actions ──────────────────────────────────────────────────────────────────
   setSession: (user: User, pek: CryptoKey, rsaPrivateKey: CryptoKey) => void;
   setVaultKey: (vaultId: string, vek: CryptoKey) => void;
@@ -38,6 +40,7 @@ interface VaultState {
   lock: () => void;       // lock screen — clears keys but keeps user info for re-auth
   unlock: (pek: CryptoKey, rsaPrivateKey: CryptoKey) => void;
   clearAll: () => void;   // full logout — clears everything
+  triggerVaultRefresh: () => void;
 }
 
 export const useVaultStore = create<VaultState>((set) => ({
@@ -49,9 +52,18 @@ export const useVaultStore = create<VaultState>((set) => ({
   vaultIndex:      null,
   securityStatuses: new Map(),
   isLocked:        false,
+  vaultRefreshTrigger: 0,
 
-  setSession: (user, pek, rsaPrivateKey) =>
-    set({ user, pek, rsaPrivateKey, isAuthenticated: true, isLocked: false }),
+  setSession: (user, pek, rsaPrivateKey) => {
+    set({ user, pek, rsaPrivateKey, isAuthenticated: true, isLocked: false });
+    // Asynchronously save to sessionStorage to survive F5 refresh
+    try {
+      // Security fix: ONLY store user info. Keys will be lost on refresh, forcing a lock.
+      sessionStorage.setItem('omerta_session', JSON.stringify({ user }));
+    } catch (e) {
+      console.error('Failed to write to sessionStorage', e);
+    }
+  },
 
   setVaultKey: (vaultId, vek) =>
     set((state) => {
@@ -76,12 +88,17 @@ export const useVaultStore = create<VaultState>((set) => ({
     set({ pek, rsaPrivateKey, isLocked: false }),
 
   // Full logout
-  clearAll: () =>
+  clearAll: () => {
+    sessionStorage.removeItem('omerta_session');
     set({
       user: null, isAuthenticated: false,
       pek: null, rsaPrivateKey: null,
       vaultKeys: new Map(), vaultIndex: null,
       securityStatuses: new Map(),
       isLocked: false,
-    }),
+      vaultRefreshTrigger: 0,
+    });
+  },
+
+  triggerVaultRefresh: () => set((state) => ({ vaultRefreshTrigger: state.vaultRefreshTrigger + 1 })),
 }));
