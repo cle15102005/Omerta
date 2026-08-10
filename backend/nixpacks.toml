@@ -1,0 +1,18 @@
+# Nixpacks build config for Railway
+# Tells Railway to use Node 20 and install only production deps after build
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[phases.post_build]
+# Prune dev dependencies after build to reduce image size
+cmds = ["npm prune --production"]
+
+[start]
+cmd = "node dist/server.js"

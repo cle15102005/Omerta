@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { VaultItemMeta, VaultItemFull } from '../types';
 
-const api = axios.create({ baseURL: '/api', withCredentials: true });
+const api = axios.create({ baseURL: `${import.meta.env.VITE_API_URL ?? ''}/api`, withCredentials: true });
+
 
 export const vaultApi = {
   list:      ()                      => api.get<VaultItemMeta[]>('/vault/'),

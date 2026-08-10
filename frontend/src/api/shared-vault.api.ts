@@ -1,9 +1,12 @@
 import axios from 'axios';
 
+const BASE = import.meta.env.VITE_API_URL ?? '';
+
 const api = axios.create({
-  baseURL:         '/api/shared-vaults',
+  baseURL:         `${BASE}/api/shared-vaults`,
   withCredentials: true,
 });
+
 
 export const sharedVaultApi = {
   create: (data: { encryptedMetadata: string; encryptedVEK: string }) => 
