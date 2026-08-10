@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Users, ShieldAlert, ShieldCheck, ArrowLeft, Trash2, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
+import { Plus, Users, ShieldAlert, ArrowLeft, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -59,7 +59,7 @@ export default function SharedVaultView() {
       const data = await sharedVaultApi.getAll();
       let decryptedVaults = [...data];
       if (user && rsaPrivateKey) {
-        decryptedVaults = await Promise.all(data.map(async (vault) => {
+        decryptedVaults = await Promise.all(data.map(async (vault: any) => {
           let decryptedVault = { ...vault, decryptedMetadata: { name: vault.name || 'Unknown Vault', description: '' } };
           const myMem = vault.members.find((m: any) => m.userId?._id === user.userId || m.userId === user.userId);
           if (myMem && myMem.encryptedVEK) {
@@ -212,7 +212,7 @@ export default function SharedVaultView() {
       }
 
       const fingerprint = await computeKeyFingerprint(pkRes.ecdsaPublicKey);
-      const confirmMsg = `Verified key signature.\n\nInvitee Fingerprint:\n${fingerprint}\n\nDo you want to proceed?`;
+      // fingerprint confirmed via UI modal
       const isConfirmed = await new Promise<boolean>((resolve) => {
         setPendingInviteConfirmation({ fingerprint, resolve });
       });
@@ -302,7 +302,7 @@ export default function SharedVaultView() {
                   {categoryLabels[category] || category}
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem' }}>
-                  {catItems.map((item, idx) => (
+                  {catItems.map((item: any, idx: number) => (
                     <div 
                       key={item._id} 
                       className="vault-item-card flex-col flex animate-slide-right"

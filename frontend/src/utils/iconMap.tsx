@@ -1,7 +1,8 @@
 import { 
-  Mail, Globe, KeyRound, Gamepad2, CreditCard, Laptop,
+  Mail, Globe, KeyRound, CreditCard, Laptop,
   Server, Database, Cloud
 } from 'lucide-react';
+
 import { 
   FaGithub, FaInstagram, FaFacebook, FaXTwitter, FaDiscord,
   FaYoutube, FaLinkedin, FaFigma, FaTrello, FaSlack, FaAmazon, FaPaypal

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNavigate as useNav } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Shield } from 'lucide-react';
-import { Button } from '../components/Button';
 import { Input, PasswordInput } from '../components/Input';
+
 import { authApi } from '../api/auth.api';
 import { deriveRecoveryKey, decryptPEKFromBackup, encryptPEKWithRecovery } from '../crypto/recovery.crypto';
 import { deriveMasterKeys, decryptPayload, encryptPayload, bufferToHex } from '../crypto/vault.crypto';

@@ -19,7 +19,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const [isRestoring, setIsRestoring] = useState(true);
-  const setSession = useVaultStore((s) => s.setSession);
+  useVaultStore((s) => s.setSession); // keep subscription for side-effects
 
   useEffect(() => {
     try {

@@ -6,23 +6,22 @@ import { useVaultStore } from '../store/vault.store';
 import { authApi } from '../api/auth.api';
 import { vaultApi } from '../api/vault.api';
 import { Button } from '../components/Button';
-import { PasswordInput, Input } from '../components/Input';
-import { sha256hex, deriveMasterKeys, decryptPayload, encryptPayload } from '../crypto/vault.crypto';
-import { encryptPEKWithRecovery } from '../crypto/recovery.crypto';
+import { Input } from '../components/Input';
+import { sha256hex } from '../crypto/vault.crypto';
+
 import { Modal } from '../components/Modal';
+
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { clearAll, authKeyHex, pek, triggerVaultRefresh } = useVaultStore();
+  const { clearAll, triggerVaultRefresh } = useVaultStore();
+
   
   const [email, setEmail] = useState('');
-  const [userId, setUserId] = useState('');
   const [fingerprint, setFingerprint] = useState('');
   
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+
   
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
@@ -39,7 +38,7 @@ export default function SettingsPage() {
     try {
       const { data } = await authApi.me();
       setEmail(data.email);
-      setUserId(data.userId);
+
       
       if (data.ecdsaPublicKey) {
         const hash = await sha256hex(data.ecdsaPublicKey);
@@ -112,42 +111,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentPassword || !newPassword || !pek) return;
 
-    setIsChangingPassword(true);
-    const loadingToast = toast.loading('Re-encrypting entire vault... Do not close window.');
-    
-    try {
-      // 1. Verify current password matches our salt
-      const { data: { salt } } = await authApi.getSalt(email);
-      const { authKeyHex: testAuthKey } = await deriveMasterKeys(currentPassword, salt);
-      if (testAuthKey !== authKeyHex) {
-        throw new Error('Incorrect current password');
-      }
-
-      // 2. Fetch all required data for re-encryption
-      const { data: recData } = await authApi.getRecoveryData(email);
-      const { data: { salt2 } } = await authApi.getRecoverySalt(email);
-      
-      // 3. Derive NEW keys
-      const { authKeyHex: newAuthKeyHex, pek: newPEK } = await deriveMasterKeys(newPassword, salt);
-      
-      // 4. We need the RecoveryKey to re-encrypt the PEK backup. 
-      // But wait, the user doesn't have the recovery code right now!
-      // Actually, if we don't have the recovery code, we cannot update the encryptedPEKBackup.
-      // So changing password without Recovery Code breaks the Recovery Code.
-      // To fix this without breaking the UI, we can fetch the old PEK, but we can't derive the RecoveryKey.
-      toast.error('Change password currently requires going through the Account Recovery flow.', { id: loadingToast });
-      setIsChangingPassword(false);
-      return;
-      
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to change password', { id: loadingToast });
-      setIsChangingPassword(false);
-    }
-  };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmationText !== 'DELETE') {

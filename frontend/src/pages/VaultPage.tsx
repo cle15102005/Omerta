@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Lock, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Sidebar } from '../components/Sidebar';
 import { Button } from '../components/Button';
@@ -7,7 +7,7 @@ import { vaultApi } from '../api/vault.api';
 import { useVaultStore } from '../store/vault.store';
 import { decryptPayload } from '../crypto/vault.crypto';
 import { buildVaultIndex, searchIndex } from '../crypto/merkle.crypto';
-import type { VaultItemDecrypted, VaultLeaf } from '../types';
+import type { VaultItemDecrypted } from '../types';
 import { VaultItemModal } from '../components/VaultItemModal';
 import { getIconForVaultItem } from '../utils/iconMap';
 import SharedVaultView from './SharedVaultView';

@@ -163,7 +163,7 @@ router.post('/recovery-data', authLimiter, async (req: Request, res: Response) =
 // POST /api/auth/recover  — set new master password after recovery code verification
 router.post('/recover', authLimiter, async (req: Request, res: Response) => {
   const parsed = RecoverDto.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: 'Invalid input', error: parsed.error.errors }); return; }
+  if (!parsed.success) { res.status(400).json({ message: 'Invalid input', error: parsed.error.issues }); return; }
 
   try {
     const ok = await resetPassword(parsed.data);
