@@ -5,3 +5,7 @@ dist/
 .DS_Store
 coverage/
 venv/
+
+# Local convenience scripts (personal, not project source)
+*.bat
+*.lnk
