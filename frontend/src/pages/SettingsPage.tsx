@@ -225,7 +225,11 @@ export default function SettingsPage() {
     const reEncrypted = await Promise.all(
       items.map(async (item: any) => {
         const encryptedData = await encryptPayload(pek, item.payload);
-        return { encryptedData, category: item.category };
+        // nameLeafHash = sha256(name + nameSalt) — required by backend schema
+        const nameLeafHash = await sha256hex(
+          (item.payload?.name ?? '') + (item.payload?.nameSalt ?? '00')
+        );
+        return { encryptedData, category: item.category, nameLeafHash };
       })
     );
     const index = await buildVaultIndex(
