@@ -137,7 +137,13 @@ export default function SettingsPage() {
         );
 
         // Upload freshly re-encrypted items
-        await vaultApi.import({ items: reEncrypted, vaultIndex: index });
+        await vaultApi.import({
+          items: reEncrypted,
+          vaultIndex: {
+            merkleRoot: index.merkleRoot,
+            leafHashes: index.leaves.map((l: any) => l.hash),
+          },
+        });
         toast.success(`Restored ${items.length} items successfully!`);
 
       } else if (parsed.items && parsed.user?.vaultIndex) {
