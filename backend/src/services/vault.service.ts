@@ -95,7 +95,10 @@ export async function getItemHistory(userId: string, itemId: string) {
 // ── Export (full vault for backup) ───────────────────────────────────────────
 export async function exportVault(userId: string) {
   const user  = await User.findById(userId, 'email salt vaultIndex');
-  const items = await VaultItem.find({ userId });
+  // Explicitly select encryptedData so the client can decrypt items for backup
+  const items = await VaultItem.find({ userId }, {
+    encryptedData: 1, category: 1, nameLeafHash: 1, isFavorite: 1, history: 1,
+  });
   return { user, items };
 }
 

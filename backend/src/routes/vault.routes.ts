@@ -33,8 +33,13 @@ router.post('/', async (req: Request, res: Response) => {
 
 // GET /api/vault/export  — full encrypted backup
 router.get('/export', async (req: Request, res: Response) => {
-  const data = await exportVault(req.user!.userId);
-  res.json({ version: 1, createdAt: new Date().toISOString(), ...data });
+  try {
+    const data = await exportVault(req.user!.userId);
+    res.json({ version: 1, createdAt: new Date().toISOString(), ...data });
+  } catch (err) {
+    console.error('[Vault] Export error:', err);
+    res.status(500).json({ message: 'Export failed' });
+  }
 });
 
 // POST /api/vault/import — restore from backup
