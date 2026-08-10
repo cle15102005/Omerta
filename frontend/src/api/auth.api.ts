@@ -1,10 +1,8 @@
 import axios from 'axios';
 
-const BASE = import.meta.env.VITE_API_URL ?? '';
-
 const api = axios.create({
-  baseURL:         `${BASE}/api`,
-  withCredentials: true, // sends httpOnly cookie
+  baseURL:         '/api',
+  withCredentials: true,
 });
 
 export const authApi = {

@@ -7,13 +7,14 @@ import { authApi } from '../api/auth.api';
 import { vaultApi } from '../api/vault.api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { sha256hex } from '../crypto/vault.crypto';
+import { sha256hex, decryptPayload, encryptPayload } from '../crypto/vault.crypto';
+import { buildVaultIndex } from '../crypto/merkle.crypto';
 
 import { Modal } from '../components/Modal';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { clearAll, triggerVaultRefresh } = useVaultStore();
+  const { clearAll, pek, triggerVaultRefresh } = useVaultStore();
 
   
   const [email, setEmail] = useState('');
@@ -56,10 +57,33 @@ export default function SettingsPage() {
   };
 
   const handleExport = async () => {
+    if (!pek) { toast.error('Vault is locked — please log in again'); return; }
     setIsExporting(true);
     try {
-      const { data } = await vaultApi.export();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      // 1. Fetch encrypted items from server
+      const { data: exportData } = await vaultApi.export();
+      const items: any[] = exportData.items ?? [];
+
+      // 2. Decrypt every item client-side so the backup is account-portable
+      const decryptedItems = await Promise.all(
+        items.map(async (item: any) => {
+          try {
+            const payload = await decryptPayload(pek, item.encryptedData);
+            return { ...item, encryptedData: undefined, payload };
+          } catch {
+            return { ...item, encryptedData: undefined, payload: null, decryptError: true };
+          }
+        })
+      );
+
+      const backup = {
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        warning: 'This file contains PLAINTEXT passwords. Store it securely (encrypted USB, safe storage).',
+        items: decryptedItems,
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -68,8 +92,9 @@ export default function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Vault exported successfully!');
+      toast.success('Vault exported! ⚠️ Keep this file safe — it contains plaintext passwords.');
     } catch (err) {
+      console.error(err);
       toast.error('Export failed');
     } finally {
       setIsExporting(false);
@@ -84,27 +109,51 @@ export default function SettingsPage() {
 
   const confirmImport = async () => {
     if (!pendingImportFile) return;
+    if (!pek) { toast.error('Vault is locked — please log in again'); return; }
     const file = pendingImportFile;
 
     setIsImporting(true);
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      
-      if (!parsed.items || !parsed.user?.vaultIndex) {
-        throw new Error('Invalid backup format');
+
+      // Support both v2 (plaintext payload) and v1 (legacy encrypted blobs)
+      if (parsed.version === 2 && Array.isArray(parsed.items)) {
+        // v2: items have plaintext payload — re-encrypt with current PEK
+        const items = parsed.items.filter((i: any) => i.payload && !i.decryptError);
+        if (items.length === 0) throw new Error('No valid items found in backup');
+
+        // Re-encrypt each item with the current PEK
+        const reEncrypted = await Promise.all(
+          items.map(async (item: any) => {
+            const encryptedData = await encryptPayload(pek, item.payload);
+            return { encryptedData, category: item.category };
+          })
+        );
+
+        // Rebuild Merkle index from item names
+        const index = await buildVaultIndex(
+          items.map((i: any) => ({ name: i.payload.name ?? '', nameSalt: i.payload.nameSalt ?? '00' }))
+        );
+
+        // Upload freshly re-encrypted items
+        await vaultApi.import({ items: reEncrypted, vaultIndex: index });
+        toast.success(`Restored ${items.length} items successfully!`);
+
+      } else if (parsed.items && parsed.user?.vaultIndex) {
+        // v1 legacy: encrypted blobs — only works for same account/same PEK
+        toast('⚠️ Legacy backup detected. Only works if this is the same account.', { icon: '⚠️' });
+        await vaultApi.import({ items: parsed.items, vaultIndex: parsed.user.vaultIndex });
+        toast.success('Vault restored (legacy format).');
+
+      } else {
+        throw new Error('Unrecognised backup format');
       }
 
-      await vaultApi.import({
-        items: parsed.items,
-        vaultIndex: parsed.user.vaultIndex
-      });
-      
-      toast.success('Vault restored successfully!');
       setTimeout(() => triggerVaultRefresh(), 500);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Failed to import vault. Invalid file format.');
+      toast.error(err.message || 'Failed to import vault. Invalid file format.');
     } finally {
       setIsImporting(false);
       setPendingImportFile(null);
