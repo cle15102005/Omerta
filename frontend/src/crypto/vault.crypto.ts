@@ -150,5 +150,27 @@ export async function sha256hex(input: string): Promise<string> {
   return bufferToHex(digest);
 }
 
+// ── Backup Key Derivation ──────────────────────────────────────────────────────
+// Derives a standalone AES-256-GCM key purely from a password + random salt.
+// Used to encrypt portable backup files — completely independent of the PEK.
+
+export async function deriveBackupKey(password: string, saltBase64: string): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const salt = base64ToBuffer(saltBase64);
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password) as any,
+    { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt as any, iterations: PBKDF2_ITERATIONS, hash: PBKDF2_HASH },
+    keyMaterial,
+    256
+  );
+  return crypto.subtle.importKey(
+    'raw', bits, { name: 'AES-GCM', length: KEY_LENGTH }, false, ['encrypt', 'decrypt']
+  );
+}
+
 // ── Re-export helpers for other crypto modules ────────────────────────────────
 export { bufferToBase64, base64ToBuffer, bufferToHex, hexToBuffer };
