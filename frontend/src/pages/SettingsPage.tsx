@@ -276,21 +276,21 @@ export default function SettingsPage() {
 
           {/* Account Identity */}
           <div className="vault-item-card" style={{ padding: '2rem' }}>
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20} className="text-accent" /> Cryptographic Identity</h3>
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20} className="text-accent" /> Your Account</h3>
             <div className="mb-4">
-              <div className="text-sm text-dim mb-1">Email Address</div>
+              <div className="text-sm text-dim mb-1">Email</div>
               <div className="font-mono bg-bg p-3 rounded border border-white/5">{email || 'Loading...'}</div>
             </div>
             <div>
               <div className="text-sm text-dim mb-1 flex justify-between items-end">
-                <span>ECDSA Key Fingerprint</span>
+                <span>Security Fingerprint</span>
                 <button onClick={copyFingerprint} className="text-accent hover:text-white transition-colors"><Copy size={14} /></button>
               </div>
               <div className="font-mono bg-bg p-3 rounded border border-white/5 text-accent tracking-wider text-center font-bold">
                 {fingerprint || 'Computing...'}
               </div>
               <p className="text-xs text-dim mt-2 leading-relaxed">
-                This fingerprint uniquely identifies your public key. When someone invites you to a Shared Vault, verify it over a secure channel (e.g. Signal or phone call) to prevent impersonation attacks.
+                This code is your unique identity in Omerta. When someone shares a vault with you, they will see this code. Confirm it matches over a phone call or message to make sure it is really you.
               </p>
             </div>
           </div>
@@ -298,14 +298,13 @@ export default function SettingsPage() {
           {/* Backup & Restore */}
           <div className="vault-item-card" style={{ padding: '2rem' }}>
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Lock size={20} style={{ color: '#50fa7b' }} /> Vault Backup &amp; Restore
+              <Lock size={20} style={{ color: '#50fa7b' }} /> Backup and Restore
             </h3>
             <p className="text-sm text-dim leading-relaxed" style={{ marginBottom: '1rem' }}>
-              Export your vault as an <strong className="text-white">AES-256-GCM encrypted</strong> file protected by a password you choose.
-              Safe to store on USB, cloud, or email — useless without the password.
+              Save a copy of your vault to a file. The file is locked with a password you choose, so it is safe to keep anywhere.
             </p>
-            <p className="text-xs text-dim leading-relaxed" style={{ marginBottom: '2rem', color: '#8be9fd' }}>
-              💡 Backups are portable — you can restore into a completely new account, even with a different master password.
+            <p className="text-xs leading-relaxed" style={{ marginBottom: '2rem', color: '#8be9fd' }}>
+              You can restore this backup into a completely new account, even if you change your master password later.
             </p>
             <div className="flex flex-wrap gap-4">
               <Button variant="primary" onClick={handleExport} isLoading={isExporting} className="w-max flex items-center gap-2">
@@ -336,10 +335,10 @@ export default function SettingsPage() {
           <div className="vault-item-card" style={{ padding: '2rem' }}>
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Key size={20} className="text-accent-alt" /> Change Master Password</h3>
             <p className="text-sm text-dim leading-relaxed" style={{ marginBottom: '2.5rem' }}>
-              Due to Omerta's zero-knowledge architecture, changing your password requires your original Recovery Code to prevent cryptographic lockouts.
+              To change your master password, you will need your Recovery Code. This keeps your vault safe even if someone else knows your current password.
             </p>
             <Button variant="ghost" onClick={() => { clearAll(); navigate('/recover'); }} className="w-max flex justify-center items-center gap-2 border-accent-alt text-accent-alt">
-              Go to Account Recovery Flow
+              Change Password
             </Button>
           </div>
 
@@ -347,22 +346,22 @@ export default function SettingsPage() {
           <div className="vault-item-card" style={{ padding: '2rem', borderColor: 'rgba(255, 42, 42, 0.3)', background: 'linear-gradient(180deg, rgba(255,42,42,0.05) 0%, transparent 100%)' }}>
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-danger"><AlertTriangle size={20} /> Danger Zone</h3>
             <p className="text-sm text-dim leading-relaxed" style={{ marginBottom: '2.5rem' }}>
-              Permanently delete your account, keys, and all vault items. This action cannot be undone and no backups are kept on the server.
+              Delete your account and everything in it. Your passwords, your keys, all gone. There is no way to undo this.
             </p>
             {!isConfirmingDelete ? (
               <Button variant="danger" onClick={() => setIsConfirmingDelete(true)} className="w-max flex justify-center items-center gap-2">
-                <Trash2 size={18} /> Delete Account
+                <Trash2 size={18} /> Delete My Account
               </Button>
             ) : (
               <div className="flex flex-col gap-5">
-                <p className="text-danger text-sm font-bold">Type "DELETE" below to confirm:</p>
+                <p className="text-danger text-sm font-bold">Type DELETE to confirm you understand this cannot be undone</p>
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <Input value={deleteConfirmationText} onChange={e => setDeleteConfirmationText(e.target.value)} placeholder="DELETE" />
                   </div>
                   <Button variant="ghost" onClick={() => { setIsConfirmingDelete(false); setDeleteConfirmationText(''); }}>Cancel</Button>
                   <Button variant="danger" onClick={handleDeleteAccount} disabled={deleteConfirmationText !== 'DELETE'} className="w-max flex items-center gap-2">
-                    <Trash2 size={18} /> Confirm Delete
+                    <Trash2 size={18} /> Yes, Delete Everything
                   </Button>
                 </div>
               </div>
@@ -378,27 +377,26 @@ export default function SettingsPage() {
         onClose={() => { setExportPwdOpen(false); setExportPwd(''); }}
         title={
           <div className="flex items-center gap-2" style={{ color: '#50fa7b' }}>
-            <Lock size={22} /> Encrypt Your Backup
+            <Lock size={22} /> Protect Your Backup
           </div>
         }
       >
         <div className="flex flex-col gap-5">
           <p className="text-sm text-dim leading-relaxed">
-            Choose a password to encrypt this backup file.<br />
-            <strong className="text-white">Remember it</strong> — you will need it to restore from this backup, even into a new account.
+            Choose a password to lock this backup file. Write it down somewhere safe because you will need it to restore your passwords later.
           </p>
           <PasswordInput
             label="Backup Password"
             value={exportPwd}
             onChange={e => setExportPwd(e.target.value)}
-            placeholder="Enter a strong password for this backup"
+            placeholder="Choose a password for this backup"
             onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') performExport(); }}
             autoFocus
           />
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="ghost" onClick={() => { setExportPwdOpen(false); setExportPwd(''); }}>Cancel</Button>
             <Button variant="primary" onClick={performExport} isLoading={isExporting} disabled={!exportPwd.trim()} className="flex items-center gap-2">
-              <Download size={18} /> Export &amp; Encrypt
+              <Download size={18} /> Save Backup
             </Button>
           </div>
         </div>
@@ -410,17 +408,17 @@ export default function SettingsPage() {
         onClose={() => setPendingImportFile(null)}
         title={
           <div className="flex items-center gap-2 text-danger">
-            <AlertTriangle size={24} /> <span>Overwrite Vault?</span>
+            <AlertTriangle size={24} /> <span>Replace Current Vault?</span>
           </div>
         }
       >
         <div className="flex flex-col gap-5">
           <p className="text-sm leading-relaxed text-dim">
-            <strong className="text-white">WARNING:</strong> Importing will completely overwrite your current vault. Make sure you have a backup of what's currently in your vault before proceeding.
+            This will replace everything currently in your vault with the contents of the backup file. Make sure you have a copy of your current passwords before continuing.
           </p>
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="ghost" onClick={() => setPendingImportFile(null)}>Cancel</Button>
-            <Button variant="danger" onClick={confirmImport} isLoading={isImporting}>Proceed</Button>
+            <Button variant="danger" onClick={confirmImport} isLoading={isImporting}>Yes, Replace My Vault</Button>
           </div>
         </div>
       </Modal>
@@ -431,26 +429,26 @@ export default function SettingsPage() {
         onClose={() => { setImportPwdOpen(false); setImportPwd(''); setPendingV3Backup(null); }}
         title={
           <div className="flex items-center gap-2 text-accent">
-            <Lock size={22} /> Decrypt Backup
+            <Lock size={22} /> Unlock Your Backup
           </div>
         }
       >
         <div className="flex flex-col gap-5">
           <p className="text-sm text-dim leading-relaxed">
-            This backup is encrypted. Enter the password that was used <strong className="text-white">when this backup was created</strong>.
+            Enter the password you chose when you created this backup file.
           </p>
           <PasswordInput
             label="Backup Password"
             value={importPwd}
             onChange={e => setImportPwd(e.target.value)}
-            placeholder="Password used when exporting"
+            placeholder="The password you used when saving the backup"
             onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') performV3Import(); }}
             autoFocus
           />
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="ghost" onClick={() => { setImportPwdOpen(false); setImportPwd(''); setPendingV3Backup(null); }}>Cancel</Button>
             <Button variant="primary" onClick={performV3Import} isLoading={isImporting} disabled={!importPwd.trim()} className="flex items-center gap-2">
-              <Upload size={18} /> Decrypt &amp; Restore
+              <Upload size={18} /> Restore My Vault
             </Button>
           </div>
         </div>
