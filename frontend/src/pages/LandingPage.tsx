@@ -116,10 +116,10 @@ export default function LandingPage() {
         <div className="landing-content">
 
         <h1 className="landing-hero-title">
-          One password to remember.<br />Everything else, protected.
+          One password for everything
         </h1>
         <p className="landing-hero-subtitle">
-          Omerta locks all your passwords behind a single master password — one only you know.
+          Omerta locks all your passwords behind a single master password, one only you know.
           We never see it. We never store it. Even if someone broke into our servers,
           your passwords would be completely unreadable.
         </p>
@@ -137,7 +137,7 @@ export default function LandingPage() {
             <div className="feature-icon pink"><Key size={24} /></div>
             <div className="feature-text">
               <h4>Share safely with family</h4>
-              <p>Give someone access to a shared account without telling them the actual password — and revoke it anytime.</p>
+              <p>Give someone access to a shared account without telling them the actual password, and revoke it anytime.</p>
             </div>
           </div>
 
@@ -195,7 +195,7 @@ export default function LandingPage() {
 
             {isRegistering && (
               <p style={{ fontSize: '0.78rem', color: 'var(--dim)', lineHeight: '1.5', margin: '-0.5rem 0 0' }}>
-                ⚠️ This password unlocks your vault. If you forget it, only your Recovery Code can restore access — so make it memorable.
+                ⚠️ This password unlocks your vault. If you forget it, only your Recovery Code can restore access, so make it memorable.
               </p>
             )}
 
@@ -211,7 +211,7 @@ export default function LandingPage() {
                   href="/recover" 
                   style={{ color: 'var(--dim)', fontSize: '0.85rem', textDecoration: 'underline' }}
                 >
-                  Forgot your master password? Recover account →
+                  Forgot your master password? Recover account
                 </a>
               </div>
             )}
@@ -223,7 +223,7 @@ export default function LandingPage() {
       {/* Scrollable Quote Section */}
       <div className="landing-quote-section">
         <h2 className="landing-quote-text">
-          Your passwords are yours alone — not ours to see, not ours to sell.
+          Your passwords are yours alone, not ours to see, not ours to sell
         </h2>
       </div>
 
@@ -242,10 +242,10 @@ export default function LandingPage() {
         <div className="flex flex-col gap-5">
           <div>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>
-              This is your <strong>lifeline</strong>. Write it down and keep it somewhere safe — a notebook, a safe, anywhere you won't lose it.
+              This is your <strong>lifeline</strong>. Write it down and keep it somewhere safe, a notebook, a safe, anywhere you won't lose it.
             </p>
             <p className="text-sm leading-relaxed mt-3" style={{ color: 'var(--danger)', fontWeight: 600 }}>
-              ⚠️ If you forget your master password and lose this code, your vault cannot be recovered by anyone — not even us. This is not a warning to skip.
+              ⚠️ If you forget your master password and lose this code, your vault cannot be recovered by anyone, not even us. This is not a warning to skip.
             </p>
           </div>
           
